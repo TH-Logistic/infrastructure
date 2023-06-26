@@ -376,7 +376,7 @@ resource "aws_ses_template" "TenantActivatedTemplate" {
                                           <span
                                               style="display:inline-block; vertical-align:middle; margin:29px 0 26px; border-bottom:1px solid #cecece; width:100px;"></span>
                                           <p style="color:#455056; font-size:15px;line-height:24px; margin:0;">
-                                              It is our pleasure to have you joined and cooporated. Your service has been activated successfully. With {{package}} already registered, your organization are welcome to utilize services unlimitedly. Start your journey today! We hope you a great time.
+                                              It is our pleasure to have you joined and cooporated. Your service has been activated successfully. With {{package}} package already registered, your organization are welcome to utilize services unlimitedly. Start your journey today! We hope you a great time.
                                           </p>
                                           <a href="https://www.thinhlh.com"
                                               style="background:#75CCD0;text-decoration:none !important; font-weight:500; margin-top:35px; color:#1e1e2d; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Visit our site</a>
