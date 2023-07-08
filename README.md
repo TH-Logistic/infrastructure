@@ -1,4 +1,4 @@
-# Tenancy Infrastructure
+# System Infrastructure
 > This infrastructure instantiate required components in order to operate the TH Logistic multi tenancy system.
 
 # How to provision?
