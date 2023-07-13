@@ -32,7 +32,7 @@ source $TEMP_VARS_FILE
 
 # Update environment variables to terraform output & user's input
 REMOTE_USER=ubuntu
-INSTANCE_IP=$instance_public_ip
+INSTANCE_IP=$registry_ip
 KEY_PAIR_NAME=$key_pair_name
 
 rm $TEMP_VARS_FILE

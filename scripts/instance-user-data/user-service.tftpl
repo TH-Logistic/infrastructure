@@ -12,5 +12,6 @@ docker run \
     --env AUTH_PORT=${auth_port} \
     -p 8001:3000 \
     --name user_container \
+    --network app_network \
     -d \
     $REGISTRY/user_service:latest

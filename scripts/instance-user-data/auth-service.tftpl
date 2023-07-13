@@ -12,5 +12,6 @@ docker run \
     --env SECRET_KEY=${secret_key} \
     -p 8000:80 \
     --name auth_container \
+    --network app_network \
     -d \
-    $REGISTRY/healthcheck_service:latest
+    $REGISTRY/auth-service:latest

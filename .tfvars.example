@@ -4,6 +4,7 @@ aws_session_token = ""
 aws_region = ""
 
 key_pair_name = ""
+app_secret = ""
 
 mongo_db_name = ""
 mongo_username = ""

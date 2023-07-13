@@ -1,0 +1,11 @@
+#!/bin/bash
+
+REGISTRY=registry.thinhlh.com
+
+docker run \
+    --env REACT_APP_BACKEND_URL=${backend_url} \
+    -p 80:3000 \
+    --name web_tenancy_admin \
+    --network app_network \
+    -d \
+    $REGISTRY/web_tenancy_admin:latest

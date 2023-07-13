@@ -36,92 +36,119 @@ module "instance_registry" {
   instance_name       = "th-registry"
   internet_gateway_id = module.internet_gateway.internet_gateway_id
   vpc_id              = module.vpc.vpc_id
-  subnet_cidr         = "10.0.20.0/24"
-  instance_size       = 40
-}
-
-module "instance_mongo" {
-  source = "github.com/TH-Logistic/ec2"
-
-  key_pair_name       = module.instance_key_pair.key_pair_name
-  instance_name       = "th-mongo"
-  internet_gateway_id = module.internet_gateway.internet_gateway_id
-  vpc_id              = module.vpc.vpc_id
   subnet_cidr         = "10.0.0.0/24"
-  user_data = templatefile("./scripts/instance-user-data/mongo-db.tftpl", {
-    mongo_db_name  = var.mongo_db_name
-    mongo_username = var.mongo_username
-    mongo_password = var.mongo_password
-  })
+  instance_size       = 40
+  user_data = file("./scripts/ec2-user-data-ubuntu.sh")
 }
 
-module "instance_auth" {
-  source = "github.com/TH-Logistic/ec2"
+data "template_cloudinit_config" "server_template_file" {
 
-  key_pair_name       = module.instance_key_pair.key_pair_name
-  instance_name       = "th-auth"
-  internet_gateway_id = module.internet_gateway.internet_gateway_id
-  vpc_id              = module.vpc.vpc_id
-  subnet_cidr         = "10.0.10.0/24"
+  gzip          = true
+  base64_encode = true
 
-  user_data = templatefile("./scripts/instance-user-data/auth-service.tftpl", {
-    algorithm      = "HS256"
-    secret_key     = var.app_secret
-    mongo_host     = module.instance_mongo.public_ip
-    mongo_port     = 27017
-    mongo_db_name  = var.mongo_db_name
-    mongo_username = var.mongo_username
-    mongo_password = var.mongo_password
-  })
+  part {
+    content_type = "text/x-shellscript"
+    content      = file("./scripts/ec2-user-data-ubuntu.sh")
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/mongo-db.tftpl", {
+      mongo_db_name  = var.mongo_db_name
+      mongo_username = var.mongo_username
+      mongo_password = var.mongo_password
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/auth-service.tftpl", {
+      algorithm      = "HS256"
+      secret_key     = var.app_secret
+      mongo_host     = "mongo_container"
+      mongo_port     = 27017
+      mongo_db_name  = var.mongo_db_name
+      mongo_username = var.mongo_username
+      mongo_password = var.mongo_password
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/user-service.tftpl", {
+      mongo_host     = "mongo_container"
+      mongo_port     = 27017
+      mongo_db_name  = var.mongo_db_name
+      mongo_username = var.mongo_username
+      mongo_password = var.mongo_password
+      auth_host      = "localhost"
+      auth_port      = 8001
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/tenant-service.tftpl", {
+      mongo_host     = "mongo_container"
+      mongo_port     = 27017
+      mongo_db_name  = var.mongo_db_name
+      mongo_username = var.mongo_username
+      mongo_password = var.mongo_password
+      auth_host      = "localhost"
+      auth_port      = 8001
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/web-tenancy-admin.tftpl", {
+      backend_url = "http://localhost:9000"
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/mail-service.tftpl", {
+      mongo_host     = "mongo_container"
+      mongo_port     = 27017
+      mongo_db_name  = var.mongo_db_name
+      mongo_username = var.mongo_username
+      mongo_password = var.mongo_password
+
+      domain_url = "localhost"
+    })
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content = templatefile("./scripts/instance-user-data/gateway.tftpl", {
+      auth_host   = "localhost"
+      user_host   = "localhost"
+      tenant_host = "localhost"
+      mail_host   = "localhost"
+    })
+  }
 }
 
-module "instance_user" {
+module "instance_server" {
   source = "github.com/TH-Logistic/ec2"
 
-  key_pair_name       = module.instance_key_pair.key_pair_name
-  instance_name       = "th-user"
-  internet_gateway_id = module.internet_gateway.internet_gateway_id
-  vpc_id              = module.vpc.vpc_id
-  subnet_cidr         = "10.0.20.0/24"
-
-  user_data = templatefile("./scripts/instance-user-data/user-service.tftpl", {
-    mongo_host     = module.instance_mongo.public_ip
-    mongo_port     = 27017
-    mongo_db_name  = var.mongo_db_name
-    mongo_username = var.mongo_username
-    mongo_password = var.mongo_password
-    auth_host      = module.instance_auth.public_ip
-    auth_port      = 8001
-  })
-}
-
-module "instance_tenant" {
-  source = "github.com/TH-Logistic/ec2"
-
-  key_pair_name       = module.instance_key_pair.key_pair_name
-  instance_name       = "th-tenant"
-  internet_gateway_id = module.internet_gateway.internet_gateway_id
-  vpc_id              = module.vpc.vpc_id
-  subnet_cidr         = "10.0.30.0/24"
-
-  user_data = templatefile("./scripts/instance-user-data/tenant-service.tftpl", {
-    mongo_host     = module.instance_mongo.public_ip
-    mongo_port     = 27017
-    mongo_db_name  = var.mongo_db_name
-    mongo_username = var.mongo_username
-    mongo_password = var.mongo_password
-    auth_host      = module.instance_auth.public_ip
-    auth_port      = 8001
-  })
+  key_pair_name        = module.instance_key_pair.key_pair_name
+  instance_name        = "th-server"
+  internet_gateway_id  = module.internet_gateway.internet_gateway_id
+  vpc_id               = module.vpc.vpc_id
+  subnet_cidr          = "10.0.10.0/24"
+  use_user_data_base64 = true
+  user_data_base64     = data.template_cloudinit_config.server_template_file.rendered
 }
 
 resource "aws_ses_email_identity" "main_email" {
   email = "thinhlh0812@gmail.com"
 }
 
-resource "aws_ses_email_identity" "sub_email" {
-  email = "19520285@gm.uit.edu.vn"
-}
+# resource "aws_ses_email_identity" "sub_email" {
+#   email = "19520285@gm.uit.edu.vn"
+# }
 
 resource "aws_ses_template" "ForgetPasswordTemplate" {
   name    = "ForgetPasswordTemplate"
@@ -378,8 +405,8 @@ resource "aws_ses_template" "TenantActivatedTemplate" {
                                           <p style="color:#455056; font-size:15px;line-height:24px; margin:0;">
                                               It is our pleasure to have you joined and cooporated. Your service has been activated successfully. With {{package}} package already registered, your organization are welcome to utilize services unlimitedly. Start your journey today! We hope you a great time.
                                           </p>
-                                          <a href="https://www.thinhlh.com"
-                                              style="background:#75CCD0;text-decoration:none !important; font-weight:500; margin-top:35px; color:#1e1e2d; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Visit our site</a>
+                                          <a href="http://{{ip}}"
+                                              style="background:#75CCD0;text-decoration:none !important; font-weight:500; margin-top:35px; color:#1e1e2d; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Visit your website</a>
                                       </td>
                                   </tr>
                                   <tr>
